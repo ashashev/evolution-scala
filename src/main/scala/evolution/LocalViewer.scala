@@ -9,7 +9,7 @@ object LocalViewer extends SimpleSwingApplication {
     val bgColor = new Color(0, 0, 0)
     val creatureColor = new Color(128, 128, 128)
     @volatile
-    var world = World((160, 120), Creature(30, 30), Creature(50, 50))
+    var world = World((160, 120), ((30, 30), Creature()), ((50, 50), Creature()))
     val area = new Component {
       preferredSize = new Dimension(640, 480)
 
@@ -21,7 +21,7 @@ object LocalViewer extends SimpleSwingApplication {
         g.fillRect(0, 0, size.width, size.height)
         g.setColor(creatureColor)
 
-        world.area.foreach((p, _) =>
+        world.foreach((p, _) =>
           g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
         )
       }

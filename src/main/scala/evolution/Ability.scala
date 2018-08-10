@@ -1,11 +1,7 @@
 package evolution
 
 sealed trait Ability {
-  def suggest(
-    w:      World,
-    c:      Creature,
-    before: List[Creature],
-    after:  List[Creature]): Suggestion
+  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion
 }
 
 object Ability {
@@ -13,7 +9,7 @@ object Ability {
 }
 
 object Suggestion {
-  type Action = (Creature, /*before:*/ List[Creature], /*after:*/ List[Creature]) => (Creature, /*before:*/ List[Creature], /*after:*/ List[Creature])
+  type Action = Area => (Area, (Int, Int))
 
   def apply(
     cost:   Creature.Energy,
@@ -28,29 +24,28 @@ class Suggestion(
   val action: Suggestion.Action)
 
 object Empty extends Ability {
-  private val suggestion = Suggestion(0, 0,
-    (c: Creature, before: List[Creature], after: List[Creature]) => (c, before, after))
-
-  def suggest(
-    w:      World,
-    c:      Creature,
-    before: List[Creature],
-    after:  List[Creature]): Suggestion = suggestion
+  private def action(pos: (Int, Int))(a: Area): (Area, (Int, Int)) = (a, pos)
+  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion =
+    Suggestion(0, 0, action(pos)(_))
 }
 
 object Photosynthesis extends Ability {
   private val getMax: Creature.Energy = 10
+  private def action(pos: (Int, Int))(
+    got: Creature.Energy)(a: Area): (Area, (Int, Int)) = {
+    a(pos) match {
+      case c: Creature =>
+        val nc = c.copy(
+          energy = c.energy + got,
+          sources = c.sources + EnergySources.Sun)
+        (a.updated(pos, nc), pos)
+    }
+  }
 
-  def suggest(
-    w:      World,
-    c:      Creature,
-    before: List[Creature],
-    after:  List[Creature]): Suggestion = {
-    val sf = w.sunFactor(c.position)
+  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion = {
+    val sf = w.sunFactor(pos)
     val get: Creature.Energy = if (sf > 0) (getMax * sf).round else 0
-    val action = (c: Creature, before: List[Creature], after: List[Creature]) =>
-      (c.copy(energy = c.energy + get, sources = c.sources + EnergySources.Sun), before, after)
 
-    Suggestion(0, get, action)
+    Suggestion(0, get, action(pos)(get)(_))
   }
 }

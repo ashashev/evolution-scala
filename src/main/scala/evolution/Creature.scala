@@ -7,14 +7,13 @@ object Creature {
   val maxLevel: Energy = 100
   val defLevel: Energy = (maxLevel * 0.5f).round
 
-  def apply(x: Int, y: Int) = new Creature((x, y), defLevel, EnergySources(), UUID.randomUUID())
+  def apply() = new Creature(defLevel, EnergySources(), UUID.randomUUID())
 }
 
 case class Creature(
-  val position: (Int, Int),
-  val energy:   Creature.Energy = Creature.defLevel,
-  val sources:  EnergySources,
-  val id:       UUID) extends Cell
+  val energy:  Creature.Energy = Creature.defLevel,
+  val sources: EnergySources,
+  val id:      UUID) extends Cell
 
 object EnergySources {
   def apply() = new EnergySources(128, 128, 128)

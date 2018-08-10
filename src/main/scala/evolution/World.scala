@@ -10,12 +10,13 @@ object World {
 
   case class CellReference(val position: (Int, Int), val id: UUID)
 
-  def apply(size: (Int, Int), cs: Creature*) = {
-    def place(area: Area, rs: List[CellReference], cs: Seq[Creature]): World = cs match {
+  def apply(size: (Int, Int), cs: ((Int, Int), Creature)*) = {
+    def place(area: Area, rs: List[CellReference],
+              cs: Seq[((Int, Int), Creature)]): World = cs match {
       case Seq() => new World(area, rs, 0)
-      case Seq(h, t @ _*) =>
-        val na = area.updated(h.position, h)
-        val nrs = CellReference(h.position, h.id) :: rs
+      case Seq((pos, c), t @ _*) =>
+        val na = area.updated(pos, c)
+        val nrs = CellReference(pos, c.id) :: rs
         place(na, nrs, t)
     }
     place(Area(size), Nil, cs)
@@ -23,9 +24,9 @@ object World {
 }
 
 class World(
-  val area:       Area,
-  private val rs: List[World.CellReference],
-  val turnNumber: Int) {
+  private val area: Area,
+  private val rs:   List[World.CellReference],
+  val turnNumber:   Int) {
 
   val size = area.size
 
@@ -38,4 +39,6 @@ class World(
     if (pos._2 < mid) pos._2 / mid
     else (pos._2 - size._2).abs / mid
   } ensuring (f => (f >= 0.0f) && (f <= 1.0f))
+
+  val foreach = area.foreach(_)
 }
