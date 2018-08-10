@@ -1,16 +1,15 @@
-package ashashev
+package evolution
 
 import scala.annotation.tailrec
-import scala.swing.event.{WindowClosing, WindowOpened}
+import scala.swing.event.{ WindowClosing, WindowOpened }
 import swing._
 
 object LocalViewer extends SimpleSwingApplication {
   def top = new MainFrame {
-    @volatile
-    private var creatures = List.empty[Creature]
     val bgColor = new Color(0, 0, 0)
     val creatureColor = new Color(128, 128, 128)
-    val world = World((160, 120))
+    @volatile
+    var world = World((160, 120), Creature(30, 30), Creature(50, 50))
     val area = new Component {
       preferredSize = new Dimension(640, 480)
 
@@ -21,9 +20,10 @@ object LocalViewer extends SimpleSwingApplication {
         g.setBackground(bgColor)
         g.fillRect(0, 0, size.width, size.height)
         g.setColor(creatureColor)
-        creatures.foreach(c => {
-          g.fillRect(c.position._1 * scale._1, c.position._2 * scale._2, scale._1, scale._2)
-        })
+
+        world.area.foreach((p, _) =>
+          g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
+        )
       }
 
       minimumSize = preferredSize
@@ -50,16 +50,16 @@ object LocalViewer extends SimpleSwingApplication {
 
     val t = new Thread {
       override def run(): Unit = {
+
         @tailrec
-        def turn(cs: List[Creature], n: Int): Unit = if (!theEnd) {
-          val csn = world.turn(cs)
-          turnNumber.text = s"Turn: $n"
-          creatures = csn
+        def turn(): Unit = if (!theEnd) {
+          world = world.turn()
+          turnNumber.text = s"Turn: ${world.turnNumber}"
           area.repaint()
-          turn(csn, n + 1)
+          turn()
         }
 
-        turn(List(Creature(30, 30), Creature(50, 50)), 0)
+        turn()
       }
     }
 
