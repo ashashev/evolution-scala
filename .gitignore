@@ -1,6 +1,7 @@
-.idea
+.*
 target
 *.swp
 _*/
 
 /bin/
+/project/build.properties
