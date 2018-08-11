@@ -1,7 +1,7 @@
 package evolution
 
 sealed trait Ability {
-  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion
+  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion]
 }
 
 object Ability {
@@ -24,9 +24,7 @@ class Suggestion(
   val action: Suggestion.Action)
 
 object Empty extends Ability {
-  private def action(pos: (Int, Int))(a: Area): (Area, (Int, Int)) = (a, pos)
-  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion =
-    Suggestion(0, 0, action(pos)(_))
+  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion] = None
 }
 
 object Photosynthesis extends Ability {
@@ -42,10 +40,10 @@ object Photosynthesis extends Ability {
     }
   }
 
-  def suggest(w: World, a: Area, pos: (Int, Int)): Suggestion = {
+  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion] = {
     val sf = w.sunFactor(pos)
     val get: Creature.Energy = if (sf > 0) (getMax * sf).round else 0
 
-    Suggestion(0, get, action(pos)(get)(_))
+    Some(Suggestion(0, get, action(pos)(get)(_)))
   }
 }
