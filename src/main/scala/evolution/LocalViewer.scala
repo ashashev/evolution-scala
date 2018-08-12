@@ -4,12 +4,37 @@ import scala.annotation.tailrec
 import scala.swing.event.{ WindowClosing, WindowOpened }
 import swing._
 
+trait Drawer {
+  def apply(w: World, scale: (Int, Int), g: Graphics2D): Unit
+}
+
+object SimpleDrawer extends Drawer {
+  private val creatureColor = new Color(128, 128, 128)
+  private val diedColor = new Color(64, 64, 64)
+
+  def apply(world: World, scale: (Int, Int), g: Graphics2D): Unit = {
+    world.foreach { (p, c) =>
+      val clr = c match {
+        case c: Creature if c.alive => creatureColor
+        case _                      => diedColor
+      }
+      g.setColor(clr)
+      g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
+    }
+
+  }
+}
+
 object LocalViewer extends SimpleSwingApplication {
   def top = new MainFrame {
-    val bgColor = new Color(0, 0, 0)
-    val creatureColor = new Color(128, 128, 128)
+    private val bgColor = new Color(0, 0, 0)
+    private val sizeOfWorld = (160, 120)
+
+    private var drawer: Drawer = SimpleDrawer
+
     @volatile
-    var world = World((160, 120), ((30, 30), Creature()), ((50, 50), Creature()))
+    private var world = World(sizeOfWorld, ((30, 60), Creature()), ((50, 60), Creature()))
+
     val area = new Component {
       preferredSize = new Dimension(640, 480)
 
@@ -17,21 +42,18 @@ object LocalViewer extends SimpleSwingApplication {
         val scale = (size.width / world.size._1, size.height / world.size._2)
 
         super.paint(g)
-        g.setBackground(bgColor)
+        g.setColor(bgColor)
         g.fillRect(0, 0, size.width, size.height)
-        g.setColor(creatureColor)
 
-        world.foreach((p, _) =>
-          g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
-        )
+        drawer(world, scale, g)
       }
 
       minimumSize = preferredSize
     }
 
-    val turnNumber = new Label("Turn: 0")
+    private val turnNumber = new Label("Turn: 0")
 
-    val controls = new BoxPanel(Orientation.Vertical) {
+    private val controls = new BoxPanel(Orientation.Vertical) {
       preferredSize = new Dimension(120, 20)
       contents += turnNumber
       contents += Swing.Glue
@@ -48,7 +70,7 @@ object LocalViewer extends SimpleSwingApplication {
     @volatile
     private var theEnd = false
 
-    val t = new Thread {
+    private val t = new Thread {
       override def run(): Unit = {
 
         @tailrec

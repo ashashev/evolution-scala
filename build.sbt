@@ -15,5 +15,6 @@ lazy val root = (project in file(".")).
       akkaHttpTest % Test,
       swing
     ),
-    scalacOptions ++= ScalacFlags.options
+    scalacOptions ++= ScalacFlags.options,
+    scalacOptions in Test ++= ScalacFlags.options
   )

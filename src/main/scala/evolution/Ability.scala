@@ -1,7 +1,8 @@
 package evolution
+import World.Position
 
 sealed trait Ability {
-  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion]
+  def suggest(w: World, a: Area, p: Position): Option[Suggestion]
 }
 
 object Ability {
@@ -9,7 +10,7 @@ object Ability {
 }
 
 object Suggestion {
-  type Action = Area => (Area, (Int, Int))
+  type Action = Area => (Area, Position)
 
   def apply(
     cost:   Creature.Energy,
@@ -24,26 +25,27 @@ class Suggestion(
   val action: Suggestion.Action)
 
 object Empty extends Ability {
-  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion] = None
+  private def action(p: Position)(a: Area) = (a, p)
+  def suggest(w: World, a: Area, p: Position): Option[Suggestion] =
+    Some(Suggestion(0, 0, action(p)(_)))
 }
 
 object Photosynthesis extends Ability {
   private val getMax: Creature.Energy = 10
-  private def action(pos: (Int, Int))(
-    got: Creature.Energy)(a: Area): (Area, (Int, Int)) = {
-    a(pos) match {
+  private def action(p: Position)(got: Creature.Energy)(a: Area) = {
+    a(p) match {
       case c: Creature =>
         val nc = c.copy(
           energy = c.energy + got,
           sources = c.sources + EnergySources.Sun)
-        (a.updated(pos, nc), pos)
+        (a.updated(p, nc), p)
     }
   }
 
-  def suggest(w: World, a: Area, pos: (Int, Int)): Option[Suggestion] = {
-    val sf = w.sunFactor(pos)
+  def suggest(w: World, a: Area, p: Position): Option[Suggestion] = {
+    val sf = w.sunFactor(p)
     val get: Creature.Energy = if (sf > 0) (getMax * sf).round else 0
 
-    Some(Suggestion(0, get, action(pos)(get)(_)))
+    Some(Suggestion(0, get, action(p)(get)(_)))
   }
 }

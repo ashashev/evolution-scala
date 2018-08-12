@@ -6,9 +6,16 @@ trait Cell {
   def id: UUID
 }
 
-object World {
+import World.{ Position, CellReference }
+import Creature.Energy
 
-  case class CellReference(val position: (Int, Int), val id: UUID)
+object World {
+  type Position = (Int, Int)
+  private val rand = util.Random
+
+  case class CellReference(val p: Position, val id: UUID)
+
+  type StepInfo = (Area, List[CellReference])
 
   def apply(size: (Int, Int), cs: ((Int, Int), Creature)*) = {
     def place(area: Area, rs: List[CellReference],
@@ -21,23 +28,120 @@ object World {
     }
     place(Area(size), Nil, cs)
   }
+
+  def findFreeNear(a: Area, p: Position): Seq[Position] = for {
+      dx <- (-1 to 1)
+      dy <- (-1 to 1)
+      np = (p._1 + dx, p._2 + dy)
+      if (np != p) && a.includes(np) && a.get(np).isEmpty
+    } yield np
+
+  def selectCell(ps: Seq[Position]): Option[Position] =
+    if (ps.isEmpty) None
+    else Some(ps(rand.nextInt(ps.size)))
 }
 
 class World(
   private val area: Area,
-  private val rs:   List[World.CellReference],
+  private val rs:   List[CellReference],
   val turnNumber:   Int) {
+
+  import World._
 
   val size = area.size
 
-  def turn(): World = {
-    new World(area, rs, turnNumber + 1)
+  def creatureTurn(a: Area, rs: List[CellReference]): StepInfo = {
+    val (r, t) = (rs.head, rs.tail)
+
+    a(r.p) match {
+      case c: Creature if c.alive =>
+        assert(c.id == r.id)
+
+        val (na, np) = c.turn(this, a, r.p)(a)
+        (na, CellReference(np, na(np).id) :: t)
+      case _ => (a, rs)
+    }
   }
 
-  def sunFactor(pos: (Int, Int)): Float = {
+  def dailySpendEnergy(a: Area, rs: List[CellReference]): StepInfo = {
+    val r = rs.head
+
+    a(r.p) match {
+      case c: Creature =>
+        assert(c.id == r.id)
+        val spent: Energy =
+          if (c.alive) (c.necessity * (1f + (1f - sunFactor(r.p)))).round
+          else 1
+        (a.updated(r.p, c.copy(energy = c.energy - spent)), rs)
+      case _ => (a, rs)
+    }
+  }
+
+  def procreate(a: Area, rs: List[CellReference]): StepInfo = {
+    val (r, t) = (rs.head, rs.tail)
+
+    a(r.p) match {
+      case c: Creature if Creature.canProcreate(c) =>
+        assert(c.id == r.id)
+        selectCell(findFreeNear(a, r.p)) match {
+          case Some(cp) =>
+            val (parent, child) = Creature.procreate(c)
+            //println(s"procreate: Position: ${cp}, id: ${child.id}")
+            (a.updated(r.p, parent).updated(cp, child),
+              r :: CellReference(cp, child.id) :: t)
+          case None => (a, rs)
+        }
+      case _ => (a, rs)
+    }
+  }
+
+  def timeToDie(a: Area, rs: List[CellReference]): StepInfo = {
+    val r = rs.head
+
+    a(r.p) match {
+      case c: Creature if Creature.mustDie(c) =>
+        assert(c.id == r.id)
+        (a.updated(r.p, Creature.die(c)), rs)
+      case _ => (a, rs)
+    }
+  }
+
+  def endTurn(a: Area, rs: List[CellReference]): StepInfo = {
+    val (r, t) = (rs.head, rs.tail)
+
+    a(r.p) match {
+      case c: Creature if Creature.mustRemoved(c) =>
+        assert(c.id == r.id)
+        //println(s"removed: Position: ${r.p}, id: ${c.id}")
+        (a - r.p, t)
+      case _ => (a, rs)
+    }
+  }
+
+  private val turnHandler = ((creatureTurn _).tupled).
+    andThen((dailySpendEnergy _).tupled).
+    andThen((procreate _).tupled).
+    andThen((timeToDie _).tupled).
+    andThen((endTurn _).tupled)
+
+  def turn(): World = {
+    def impl(a: Area, moved: List[CellReference],
+             ns: List[CellReference]): (Area, List[CellReference]) = ns match {
+      case Nil    => (a, moved.reverse)
+      case h :: t =>
+        val (na, nh) = turnHandler((a, List(h)))
+        impl(na, nh ++ moved, t)
+      case _      => impl(a, moved, ns)
+    }
+
+    val (narea, nrs) = impl(area, List.empty[CellReference], rs)
+    new World(narea, nrs, turnNumber + 1)
+  }
+
+  def sunFactor(p: Position): Float = {
     val mid = size._2.toFloat / 2f
-    if (pos._2 < mid) pos._2 / mid
-    else (pos._2 - size._2).abs / mid
+    if (p._2 < mid) p._2 / mid
+    else (p._2 - size._2).abs / mid
   } ensuring (f => (f >= 0.0f) && (f <= 1.0f))
 
   val foreach = area.foreach(_)
