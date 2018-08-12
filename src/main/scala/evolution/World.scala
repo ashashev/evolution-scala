@@ -29,12 +29,17 @@ object World {
     place(Area(size), Nil, cs)
   }
 
-  def findFreeNear(a: Area, p: Position): Seq[Position] = for {
+  def findNear(a: Area, p: Position): Seq[Position] = for {
       dx <- (-1 to 1)
       dy <- (-1 to 1)
-      np = (p._1 + dx, p._2 + dy)
-      if (np != p) && a.includes(np) && a.get(np).isEmpty
+      x = (p._1 + dx + a.size._1) % a.size._1
+      y = (p._2 + dy + a.size._2) % a.size._2
+      np = (x, y)
+      if (np != p) && a.includes(np)
     } yield np
+
+  def findFreeNear(a: Area, p: Position): Seq[Position] =
+    findNear(a, p).filter(p => a.get(p).isEmpty)
 
   def selectCell(ps: Seq[Position]): Option[Position] =
     if (ps.isEmpty) None
