@@ -3,25 +3,45 @@ package evolution
 import scala.annotation.tailrec
 import scala.swing.event.{ WindowClosing, WindowOpened }
 import swing._
+import java.awt.Color
 
 trait Drawer {
-  def apply(w: World, scale: (Int, Int), g: Graphics2D): Unit
+  def apply(w: World, scale: (Int, Int), g: Graphics2D): Unit = {
+    w.foreach { (p, c) =>
+      g.setColor(getColor(c))
+      g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
+    }
+  }
+  def getColor(c: Cell): Color
 }
 
 object SimpleDrawer extends Drawer {
   private val creatureColor = new Color(128, 128, 128)
   private val diedColor = new Color(64, 64, 64)
 
-  def apply(world: World, scale: (Int, Int), g: Graphics2D): Unit = {
-    world.foreach { (p, c) =>
-      val clr = c match {
-        case c: Creature if c.alive => creatureColor
-        case _                      => diedColor
-      }
-      g.setColor(clr)
-      g.fillRect(p._1 * scale._1, p._2 * scale._2, scale._1, scale._2)
-    }
+  def getColor(c: Cell): Color = c match {
+    case c: Creature if c.alive => creatureColor
+    case _                      => diedColor
+  }
+}
 
+object EnergyLevels extends Drawer {
+  private val aliveHueRange = (100.0f, 0.0f)
+  private val diedHueRange = (200.0f, 300.0f)
+
+  private val saturation = 1.0f
+  private val brightness = 1.0f
+
+  private val aliveRangeSize = (aliveHueRange._2 - aliveHueRange._1).abs.toFloat
+  private val diedRangeSize = (diedHueRange._2 - diedHueRange._1).abs.toFloat
+
+  def getColor(c: Cell): Color = c match {
+    case c: Creature if c.alive =>
+      val h = aliveHueRange._1 - (c.energy * aliveRangeSize / Creature.maxLevel)
+      Color.getHSBColor(h, saturation, brightness)
+    case c: Creature =>
+      val h = diedHueRange._1 + (c.energy * diedRangeSize / Creature.maxLevel)
+      Color.getHSBColor(h, saturation, brightness)
   }
 }
 
