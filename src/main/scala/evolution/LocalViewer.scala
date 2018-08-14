@@ -32,8 +32,8 @@ object SimpleDrawer extends Drawer {
 }
 
 object EnergyLevels extends Drawer {
-  private val aliveHueRange = (100.0f, 0.0f)
-  private val diedHueRange = (200.0f, 300.0f)
+  private val aliveHueRange = (120.0f, 0.0f)
+  private val diedHueRange = (200.0f, 320.0f)
 
   private val saturation = 1.0f
   private val brightness = 1.0f
@@ -44,10 +44,10 @@ object EnergyLevels extends Drawer {
   def getColor(c: Cell): Color = c match {
     case c: Creature if c.alive =>
       val h = aliveHueRange._1 - (c.energy * aliveRangeSize / Creature.maxLevel)
-      Color.getHSBColor(h, saturation, brightness)
+      Color.getHSBColor(h / 360, saturation, brightness)
     case c: Creature =>
       val h = diedHueRange._1 + (c.energy * diedRangeSize / Creature.maxLevel)
-      Color.getHSBColor(h, saturation, brightness)
+      Color.getHSBColor(h / 360, saturation, brightness)
   }
 }
 

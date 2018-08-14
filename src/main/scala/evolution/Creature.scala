@@ -7,10 +7,10 @@ import World.Position
 
 object Creature {
   type Energy = Int
-  private val maxLevel: Energy = 100
-  private val defLevel: Energy = (maxLevel * 0.4f).round
-  private val defNecessity: Energy = (maxLevel * 0.01f).round
-  private val procreationLevel: Energy = (maxLevel * 0.7f).round
+  val maxLevel: Energy = 1000
+  private val defLevel: Energy = 40
+  private val defNecessity: Energy = 1
+  private val procreationLevel: Energy = 200
   private val defAbilities =
     Vector.fill(8)(Photosynthesis) ++ Vector.fill(8)(Empty)
   private val defSolver = RandomSolver
@@ -38,7 +38,7 @@ object Creature {
     c.alive && ((c.energy >= maxLevel) || (c.energy <= 0))
 
   def die(c: Creature): Creature =
-    if (c.energy <= 0) c.copy(energy = c.necessity * 2, alive = false)
+    if (c.energy <= 0) c.copy(energy = c.necessity * 200, alive = false)
     else c.copy(energy = c.energy / 2, alive = false)
 
   def mustRemoved(c: Creature): Boolean = !c.alive && (c.energy <= 0)
