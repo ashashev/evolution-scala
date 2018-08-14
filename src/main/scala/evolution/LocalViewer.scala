@@ -1,7 +1,7 @@
 package evolution
 
 import scala.annotation.tailrec
-import scala.swing.event.{ WindowClosing, WindowOpened }
+import scala.swing.event.{ WindowClosing, WindowOpened, SelectionChanged }
 import swing._
 import java.awt.Color
 
@@ -13,6 +13,12 @@ trait Drawer {
     }
   }
   def getColor(c: Cell): Color
+}
+
+object Drawer {
+  val drawers = Map(
+    "Simple" -> SimpleDrawer,
+    "Enregy Levels" -> EnergyLevels)
 }
 
 object SimpleDrawer extends Drawer {
@@ -50,7 +56,10 @@ object LocalViewer extends SimpleSwingApplication {
     private val bgColor = new Color(0, 0, 0)
     private val sizeOfWorld = (160, 120)
 
-    private var drawer: Drawer = SimpleDrawer
+    private def restrictHeight[T <: Component](s: T): T = {
+      s.maximumSize = new Dimension(Short.MaxValue, s.preferredSize.height)
+      s
+    }
 
     @volatile
     private var world = World(sizeOfWorld, ((30, 60), Creature()), ((50, 60), Creature()))
@@ -71,11 +80,28 @@ object LocalViewer extends SimpleSwingApplication {
       minimumSize = preferredSize
     }
 
-    private val turnNumber = new Label("Turn: 0")
+    private val turnNumber = restrictHeight(new Label("0"))
+    turnNumber.preferredSize = new Dimension(
+      150, turnNumber.preferredSize.height)
+    turnNumber.horizontalAlignment = Alignment.Left
+
+    private val drawers = restrictHeight(new ComboBox(
+      Drawer.drawers.keys.toSeq))
+
+    private var drawer: Drawer = Drawer.drawers(drawers.selection.item)
 
     private val controls = new BoxPanel(Orientation.Vertical) {
-      preferredSize = new Dimension(120, 20)
-      contents += turnNumber
+      contents += restrictHeight(new BoxPanel(Orientation.Horizontal) {
+        val l = new Label("Turn: ")
+        l.horizontalAlignment = Alignment.Left
+        contents += Swing.HStrut(3)
+        contents += l
+        contents += Swing.HStrut(5)
+        contents += turnNumber
+      })
+
+      contents += Swing.VStrut(5)
+      contents += drawers
       contents += Swing.Glue
     }
 
@@ -96,7 +122,7 @@ object LocalViewer extends SimpleSwingApplication {
         @tailrec
         def turn(): Unit = if (!theEnd) {
           world = world.turn()
-          turnNumber.text = s"Turn: ${world.turnNumber}"
+          turnNumber.text = s"${world.turnNumber}"
           area.repaint()
           turn()
         }
@@ -105,12 +131,17 @@ object LocalViewer extends SimpleSwingApplication {
       }
     }
 
+    listenTo(drawers.selection)
+
     reactions += {
       case WindowOpened(_) =>
         t.start()
       case WindowClosing(_) =>
         theEnd = true
         t.join()
+      case SelectionChanged(`drawers`) =>
+        drawer = Drawer.drawers(drawers.selection.item)
+        area.repaint()
     }
   }
 }
