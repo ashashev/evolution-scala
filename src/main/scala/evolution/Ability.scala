@@ -49,3 +49,33 @@ object Photosynthesis extends Ability {
     Some(Suggestion(0, get, action(p)(get)(_)))
   }
 }
+
+object Scavenger extends Ability {
+  private val cost = 1
+  private def died(c: Option[Cell]): Option[Creature] = c match {
+    case Some(c: Creature) if !c.alive => Some(c)
+    case _                             => None
+  }
+  private def action(p: Position)(tp: Position, got: Creature.Energy)(a: Area) = {
+    a(p) match {
+      case c: Creature =>
+        val nc = c.copy(
+          energy = c.energy + got - cost,
+          sources = c.sources + EnergySources.Carrion)
+        ((a - p) + (tp -> nc), tp)
+    }
+  }
+  def suggest(w: World, area: Area, pos: Position): Option[Suggestion] = {
+    val ts = (for {
+      p <- World.findNear(area, pos)
+      c <- died(area.get(p))
+    } yield (p, c)).sortBy(_._2.energy)(math.Ordering[Int].reverse)
+
+    ts match {
+      case Seq((tp, t), _*) =>
+        Some(Suggestion(cost, t.energy, action(pos)(tp, t.energy)(_)))
+      case _               => None
+    }
+  }
+}
+

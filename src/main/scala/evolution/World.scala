@@ -130,13 +130,18 @@ class World(
     andThen((endTurn _).tupled)
 
   def turn(): World = {
+    def isValid(a: Area, r: CellReference): Boolean = a.get(r.p) match {
+      case Some(c) => c.id == r.id
+      case _ => false
+    }
     def impl(a: Area, moved: List[CellReference],
              ns: List[CellReference]): (Area, List[CellReference]) = ns match {
       case Nil    => (a, moved.reverse)
-      case h :: t =>
+      case h :: t if isValid(a, h) =>
         val (na, nh) = turnHandler((a, List(h)))
         impl(na, nh ++ moved, t)
-      case _      => impl(a, moved, ns)
+      case h :: t if !isValid(a, h) =>
+        impl(a, moved, t)
     }
 
     val (narea, nrs) = impl(area, List.empty[CellReference], rs)
