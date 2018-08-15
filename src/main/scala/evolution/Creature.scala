@@ -15,6 +15,8 @@ object Creature {
     Vector.fill(8)(Photosynthesis) ++ Vector.fill(8)(Empty)
   private val defSolver = RandomSolver
 
+  private val rand = util.Random
+
   def apply() = new Creature(
     defLevel,
     EnergySources(),
@@ -24,13 +26,21 @@ object Creature {
     defAbilities,
     defSolver)
 
+  private def mutateAbilities(as: Vector[Ability]): Vector[Ability] = {
+    if (rand.nextInt(4) != 0) as
+    else as.updated(rand.nextInt(as.size), Ability.random())
+  }
+
   //TODO: Idea - the procreation can be ability.
   def canProcreate(c: Creature): Boolean =
     c.alive && (c.energy >= procreationLevel)
 
   def procreate(parent: Creature): (Creature, Creature) = {
     val updatedParent = parent.copy(energy = parent.energy / 2)
-    val child = parent.copy(energy = defLevel, id = UUID.randomUUID())
+    val child = parent.copy(
+        energy = defLevel,
+        id = UUID.randomUUID(),
+        abilities = mutateAbilities(parent.abilities))
     (updatedParent, child)
   }
 
@@ -58,7 +68,9 @@ case class Creature(
       ability <- abilities
       s <- ability.suggest(w, a, p)
     } yield s
-    solver(suggestions).action
+
+    if (suggestions.isEmpty) Empty.suggest(w, a, p).get.action
+    else solver(suggestions).action
   }
 }
 

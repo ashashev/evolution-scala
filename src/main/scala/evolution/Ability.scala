@@ -6,7 +6,10 @@ sealed trait Ability {
 }
 
 object Ability {
-  def apply() = Photosynthesis
+  def random(): Ability = abilities(rand.nextInt(abilities.size))
+
+  private val rand = util.Random
+  private val abilities = Vector(Photosynthesis, Scavenger, Carnivore)
 }
 
 object Suggestion {
@@ -106,10 +109,22 @@ object Carnivore extends Ability {
     }
   }
 
+  private def diff(c1: Creature, c2: Creature): Int = {
+    (c1.abilities zip c2.abilities)./:(0){ (z, cs) =>
+      if (cs._1 == cs._2) z
+      else z + 1
+    }
+  }
+
   def suggest(w: World, area: Area, pos: Position): Option[Suggestion] = {
+    val carnivore = area(pos) match {
+      case c: Creature => c
+    }
+
     val ts = (for {
       p <- World.findNear(area, pos)
       c <- alive(area.get(p))
+      if diff(carnivore, c) > 1
     } yield (p, c)).sortBy(_._2.energy)(math.Ordering[Int].reverse)
 
     ts match {

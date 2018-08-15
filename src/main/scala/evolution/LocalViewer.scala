@@ -18,7 +18,8 @@ trait Drawer {
 object Drawer {
   val drawers = Map(
     "Simple" -> SimpleDrawer,
-    "Enregy Levels" -> EnergyLevels)
+    "Energy Levels" -> EnergyLevels,
+    "Energy Source Types" -> EnergySourceTypes )
 }
 
 object SimpleDrawer extends Drawer {
@@ -48,6 +49,16 @@ object EnergyLevels extends Drawer {
     case c: Creature =>
       val h = diedHueRange._1 + (c.energy * diedRangeSize / Creature.maxLevel)
       Color.getHSBColor(h / 360, saturation, brightness)
+  }
+}
+
+object EnergySourceTypes extends Drawer {
+  private val diedColor = new Color(64, 64, 64)
+
+  def getColor(c: Cell): Color = c match {
+    case c: Creature if c.alive =>
+      new Color(c.sources.meat, c.sources.sun, c.sources.carrion)
+    case _ => diedColor
   }
 }
 
