@@ -66,19 +66,18 @@ case class Creature(
   def turn(w: World, a: Area, p: Position): Suggestion.Action = {
     val suggestions = for {
       ability <- abilities
-      s <- ability.suggest(w, a, p)
-    } yield s
+    } yield ability.suggest(w, a, p)
 
-    if (suggestions.isEmpty) Empty.suggest(w, a, p).get.action
-    else solver(suggestions).action
+    assert(suggestions.nonEmpty)
+    solver(suggestions).action
   }
 }
 
 object EnergySources {
   def apply() = new EnergySources(128, 128, 128)
-  val Meat = new EnergySources(1, -1, -1)
-  val Sun = new EnergySources(-1, 1, -1)
-  val Carrion = new EnergySources(-1, -1, 1)
+  def Meat(got: Energy) = new EnergySources(got, -1 * got, -1 * got)
+  def Sun(got: Energy) = new EnergySources(-1 * got, got, -1 * got)
+  def Carrion(got: Energy) = new EnergySources(-1 * got, -1 * got, got)
 }
 
 class EnergySources(val meat: Int, val sun: Int, val carrion: Int) {

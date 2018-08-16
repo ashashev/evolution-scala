@@ -2,7 +2,7 @@ package evolution
 import World.Position
 
 sealed trait Ability {
-  def suggest(w: World, a: Area, p: Position): Option[Suggestion]
+  def suggest(w: World, a: Area, p: Position): Suggestion
 }
 
 object Ability {
@@ -29,8 +29,8 @@ class Suggestion(
 
 object Empty extends Ability {
   private def action(p: Position)(a: Area) = (a, p)
-  def suggest(w: World, a: Area, p: Position): Option[Suggestion] =
-    Some(Suggestion(0, 0, action(p)(_)))
+  def suggest(w: World, a: Area, p: Position): Suggestion =
+    Suggestion(0, 0, action(p)(_))
 }
 
 object Photosynthesis extends Ability {
@@ -40,16 +40,16 @@ object Photosynthesis extends Ability {
       case c: Creature =>
         val nc = c.copy(
           energy = c.energy + got,
-          sources = c.sources + EnergySources.Sun)
+          sources = c.sources + EnergySources.Sun(got))
         (a.updated(p, nc), p)
     }
   }
 
-  def suggest(w: World, a: Area, p: Position): Option[Suggestion] = {
+  def suggest(w: World, a: Area, p: Position): Suggestion = {
     val sf = w.sunFactor(p)
     val get: Creature.Energy = if (sf > 0) (getMax * sf).round else 0
 
-    Some(Suggestion(0, get, action(p)(get)(_)))
+    Suggestion(0, get, action(p)(get)(_))
   }
 }
 
@@ -65,12 +65,12 @@ object Scavenger extends Ability {
       case c: Creature =>
         val nc = c.copy(
           energy = c.energy + got - cost,
-          sources = c.sources + EnergySources.Carrion)
+          sources = c.sources + EnergySources.Carrion(got))
         ((a - p) + (tp -> nc), tp)
     }
   }
 
-  def suggest(w: World, area: Area, pos: Position): Option[Suggestion] = {
+  def suggest(w: World, area: Area, pos: Position): Suggestion = {
     val ts = (for {
       p <- World.findNear(area, pos)
       c <- died(area.get(p))
@@ -78,8 +78,8 @@ object Scavenger extends Ability {
 
     ts match {
       case Seq((tp, t), _*) =>
-        Some(Suggestion(cost, t.energy, action(pos)(tp, t.energy)(_)))
-      case _ => None
+        Suggestion(cost, t.energy, action(pos)(tp, t.energy)(_))
+      case _ => Empty.suggest(w, area, pos)
     }
   }
 }
@@ -103,7 +103,7 @@ object Carnivore extends Ability {
         else (
           c.copy(
             energy = c.energy + got - cost,
-            sources = c.sources + EnergySources.Carrion),
+            sources = c.sources + EnergySources.Meat(got)),
           tp)
         ((a - p) + (np -> nc), np)
     }
@@ -116,7 +116,7 @@ object Carnivore extends Ability {
     }
   }
 
-  def suggest(w: World, area: Area, pos: Position): Option[Suggestion] = {
+  def suggest(w: World, area: Area, pos: Position): Suggestion = {
     val carnivore = area(pos) match {
       case c: Creature => c
     }
@@ -129,8 +129,8 @@ object Carnivore extends Ability {
 
     ts match {
       case Seq((tp, t), _*) =>
-        Some(Suggestion(cost, t.energy, action(pos)(tp, t.energy * 2 / 3)(_)))
-      case _ => None
+        Suggestion(cost, t.energy, action(pos)(tp, t.energy * 2 / 3)(_))
+      case _ => Empty.suggest(w, area, pos)
     }
   }
 }
