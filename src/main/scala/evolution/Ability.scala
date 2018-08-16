@@ -9,7 +9,7 @@ object Ability {
   def random(): Ability = abilities(rand.nextInt(abilities.size))
 
   private val rand = util.Random
-  private val abilities = Vector(Photosynthesis, Scavenger, Carnivore)
+  private val abilities = Vector(Photosynthesis, Scavenger, Carnivore, Moveable)
 }
 
 object Suggestion {
@@ -132,5 +132,20 @@ object Carnivore extends Ability {
         Suggestion(cost, t.energy, action(pos)(tp, t.energy * 2 / 3)(_))
       case _ => Empty.suggest(w, area, pos)
     }
+  }
+}
+
+object Moveable extends Ability {
+  private val rand = util.Random
+  private val cost = 1
+  private def action(cp: Position)(np: Position)(a: Area) = a(cp) match {
+    case c: Creature => {
+      ((a + (np -> c.copy(energy = c.energy - cost))) - cp, np)
+    }
+  }
+  def suggest(w: World, area: Area, pos: Position): Suggestion = {
+    val fs = World.findFreeNear(area, pos)
+    if (fs.nonEmpty) Suggestion(cost, 0, action(pos)(fs(rand.nextInt(fs.size))))
+    else Empty.suggest(w, area, pos)
   }
 }
