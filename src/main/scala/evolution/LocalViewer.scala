@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 import scala.swing.event.{ WindowClosing, WindowOpened, SelectionChanged }
 import swing._
 import java.awt.Color
+import java.time.{Instant, Duration}
 
 trait Drawer {
   def apply(w: World, scale: (Int, Int), g: Graphics2D): Unit = {
@@ -66,6 +67,7 @@ object LocalViewer extends SimpleSwingApplication {
   def top = new MainFrame {
     private val bgColor = new Color(0, 0, 0)
     private val sizeOfWorld = (160, 120)
+    private val startTime = Instant.now()
 
     private def restrictHeight[T <: Component](s: T): T = {
       s.maximumSize = new Dimension(Short.MaxValue, s.preferredSize.height)
@@ -96,6 +98,10 @@ object LocalViewer extends SimpleSwingApplication {
       150, turnNumber.preferredSize.height)
     turnNumber.horizontalAlignment = Alignment.Left
 
+    private val elapsed = new Label("Elapsed: ")
+    elapsed.horizontalAlignment = Alignment.Left
+    elapsed.horizontalTextPosition = Alignment.Left
+
     private val drawers = restrictHeight(new ComboBox(
       Drawer.drawers.keys.toSeq))
 
@@ -114,6 +120,10 @@ object LocalViewer extends SimpleSwingApplication {
       contents += Swing.VStrut(5)
       contents += drawers
       contents += Swing.Glue
+      contents += new BoxPanel(Orientation.Horizontal) {
+        contents += elapsed
+        contents += Swing.HGlue
+      }
     }
 
     title = "Life"
@@ -135,6 +145,8 @@ object LocalViewer extends SimpleSwingApplication {
           world = world.turn()
           turnNumber.text = s"${world.turnNumber}"
           area.repaint()
+          elapsed.text = "Elapsed: " +
+            Utils.prettyDuration(Duration.between(startTime, Instant.now))
           turn()
         }
 
